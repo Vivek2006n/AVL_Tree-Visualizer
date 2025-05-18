@@ -160,3 +160,94 @@ class AVLTree {
     }
 }
 
+
+//VISUALIZATION WITH D3 
+const avl = new AVLTree();
+const svg = d3.select("svg");
+const width = +svg.attr("width");
+const height = +svg.attr("height");
+
+const treeLayout = d3.tree().size([width - 80, height - 80]);
+
+const tooltip = d3.select("#tooltip");
+
+
+let g = svg.select("g");
+if (g.empty()) {
+    g = svg.append("g").attr("transform", "translate(40,40)");
+}
+
+function update(source) {
+    let root = d3.hierarchy(source);
+    treeLayout(root);
+
+
+    const t = d3.transition().duration(750);
+
+
+    const nodes = g.selectAll(".node")
+        .data(root.descendants(), d => d.data.name + "_" + d.depth);
+
+
+    function showTooltip(event, text) {
+        tooltip.transition().duration(200).style("opacity", 0.9);
+        tooltip.html(text)
+            .style("left", (event.pageX + 10) + "px")
+            .style("top", (event.pageY - 28) + "px");
+    }
+
+    function moveTooltip(event) {
+        tooltip.style("left", (event.pageX + 10) + "px")
+            .style("top", (event.pageY - 28) + "px");
+    }
+
+    function hideTooltip() {
+        tooltip.transition().duration(200).style("opacity", 0);
+    }
+
+
+    const nodeEnter = nodes.enter().append("g")
+        .attr("class", "node")
+        .attr("transform", d => `translate(${d.x},${d.y})`)
+        .on("mouseover", (event, d) => showTooltip(event, "Balance Factor: " + d.data.balance))
+        .on("mousemove", moveTooltip)
+        .on("mouseout", hideTooltip);
+
+    nodeEnter.append("circle")
+        .attr("r", 20);
+
+    nodeEnter.append("text")
+        .attr("dy", 5)
+        .attr("text-anchor", "middle")
+        .text(d => d.data.name);
+
+
+    const nodeUpdate = nodeEnter.merge(nodes);
+    nodeUpdate.transition(t)
+        .attr("transform", d => `translate(${d.x},${d.y})`);
+
+
+    nodes.exit().remove();
+
+
+    const links = g.selectAll(".link")
+        .data(root.links(), d => d.source.data.name + "_" + d.target.data.name);
+
+
+    const linkEnter = links.enter().append("path")
+        .attr("class", "link")
+        .attr("d", d3.linkVertical()
+            .x(d => d.x)
+            .y(d => d.y)
+        );
+
+
+    linkEnter.merge(links)
+        .transition(t)
+        .attr("d", d3.linkVertical()
+            .x(d => d.x)
+            .y(d => d.y)
+        );
+
+    links.exit().remove();
+}
